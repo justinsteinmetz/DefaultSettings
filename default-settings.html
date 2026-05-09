@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEFAULT SETTINGS</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+/* ── PHASE-AWARE COLOUR SYSTEM ── */
+/* Phase 0 (intro): binary pink/blue hard separation
+   Phase 1 (input): dusty rose dominant
+   Phase 2 (output): desaturated cyan dominant
+   Phase 3 (woven): colours overlap, violet bleeds in
+   Result: full dissolution
+*/
+
+:root {
+  --bg:         #f4f0f2;
+  --surface:    #ede8ec;
+  --panel:      #e6e0e5;
+  --border:     #cfc7ce;
+  --border-hi:  #b0a8b0;
+  --text:       #1e1820;
+  --muted:      #7a6e78;
+  --faint:      #b8adb6;
+  --dim:        #d8d0d6;
+
+  /* Pink axis */
+  --rose:       #c4607a;
+  --rose-dim:   #f0e4e8;
+  --rose-mid:   #d8849a;
+  --rose-pale:  #e8d4da;
+
+  /* Blue axis */
+  --cyan:       #3a7a8c;
+  --cyan-dim:   #deeef2;
+  --cyan-mid:   #5a9aac;
+  --cyan-pale:  #d0e8ee;
+
+  /* Violet — the overlap zone */
+  --violet:     #6e4a8c;
+  --violet-dim: #ede4f4;
+  --violet-mid: #9a78bc;
+
+  /* Current phase accent — JS updates these */
+  --accent:     #c4607a;
+  --accent-dim: #f0e4e8;
+  --accent-mid: #d8849a;
+
+  /* Timer */
+  --timer-urgent: #c4607a;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 1.2s ease;
+}
+
+/* Scanline texture — system diagnostic feel */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.008) 3px,
+    rgba(0,0,0,0.008) 4px
+  );
+  pointer-events: none; z-index: 0;
+}
+
+/* Binary gradient — bleeds on intro, dissolves later */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(196,96,122,0.06) 0%,
+    transparent 45%,
+    transparent 55%,
+    rgba(58,122,140,0.06) 100%
+  );
+  pointer-events: none; z-index: 0;
+  transition: opacity 2s ease;
+}
+
+body.phase-dissolve::after { opacity: 0.3; }
+body.phase-result::after { opacity: 0; }
+
+.screen { display: none; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+
+/* ── PROGRESS BAR ── */
+.prog-wrap {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 2px; z-index: 300;
+  background: var(--dim);
+}
+.prog-rose {
+  position: absolute; top: 0; left: 0;
+  height: 100%; background: var(--rose);
+  transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+.prog-cyan {
+  position: absolute; top: 0; right: 0;
+  height: 100%; background: var(--cyan);
+  transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+  width: 0%;
+}
+
+/* ── SHARED LABEL STYLE ── */
+.sys-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+/* ── INTRO SCREEN ── */
+#intro {
+  min-height: 100vh; flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(2rem, 6vw, 5rem);
+  max-width: 860px; margin: 0 auto; width: 100%;
+}
+
+.intro-header {
+  display: flex; justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 2rem; border-bottom: 1px solid var(--border);
+}
+
+.intro-header-left { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.intro-dept {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.52rem; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--muted); line-height: 1.8;
+}
+
+.intro-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.16em;
+  color: var(--faint); line-height: 1.8; text-align: right;
+}
+
+/* Binary colour split on title */
+.intro-title-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  justify-content: center; padding: 4rem 0 3rem;
+}
+
+.intro-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.95; letter-spacing: -0.03em;
+  color: var(--text); margin-bottom: 0.1em;
+}
+
+.intro-title-key {
+  font-weight: 500;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.95; letter-spacing: -0.03em;
+  display: inline-block;
+  /* The conceptual split: D-E-F-A-U-L-T left=rose, right=cyan */
+  background: linear-gradient(90deg, var(--rose) 0%, var(--rose) 40%, var(--cyan) 60%, var(--cyan) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: background 2s ease;
+}
+
+.intro-premise {
+  font-size: 0.78rem; line-height: 2.1;
+  color: var(--muted); max-width: 480px;
+  margin-top: 2.5rem; margin-bottom: 2.5rem;
+}
+
+.intro-premise strong { color: var(--text); font-weight: 400; }
+
+/* Two-column diagnostic panel */
+.intro-audit {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border); margin-bottom: 3rem;
+  background: var(--surface);
+}
+
+.audit-col {
+  padding: 0;
+  border-right: 1px solid var(--border);
+}
+.audit-col:last-child { border-right: none; }
+
+.audit-col-header {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.26em;
+  text-transform: uppercase; padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  display: flex; align-items: center; gap: 0.5rem;
+}
+
+.audit-col-header .col-dot {
+  width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+}
+
+.audit-col-header.rose-header .col-dot { background: var(--rose); }
+.audit-col-header.cyan-header .col-dot { background: var(--cyan); }
+
+.audit-item {
+  font-size: 0.67rem; color: var(--muted);
+  padding: 0.55rem 0.9rem; line-height: 1.6;
+  border-bottom: 1px solid var(--dim);
+  display: flex; gap: 0.6rem; align-items: flex-start;
+}
+.audit-item:last-child { border-bottom: none; }
+
+.audit-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; color: var(--faint);
+  flex-shrink: 0; padding-top: 0.1rem; min-width: 1rem;
+}
+
+/* Timer config widget */
+.intro-contract {
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 0.7rem 1rem; margin-bottom: 1.8rem;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+.contract-item {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem; letter-spacing: 0.08em;
+  color: var(--muted); line-height: 1;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--dim);
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.contract-item:last-child { border-bottom: none; }
+.contract-item::before {
+  content: '—'; color: var(--faint); flex-shrink: 0;
+  font-size: 0.5rem;
+}
+
+.timer-config {
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 0.9rem 1rem; margin-bottom: 2.5rem;
+  display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap;
+}
+
+.timer-config-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--muted);
+  flex-shrink: 0;
+}
+
+.timer-mode-btns {
+  display: flex; gap: 0.35rem;
+}
+
+.timer-mode-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.56rem; letter-spacing: 0.1em;
+  padding: 0.3rem 0.7rem; border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  cursor: pointer; transition: all 0.15s;
+}
+.timer-mode-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.timer-mode-btn.active {
+  background: var(--rose); color: #fff; border-color: var(--rose);
+}
+
+.timer-seconds-wrap {
+  display: flex; align-items: center; gap: 0.5rem; margin-left: auto;
+}
+.timer-seconds-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; color: var(--faint); letter-spacing: 0.1em;
+}
+.timer-seconds-input {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem; width: 3.5rem; text-align: center;
+  padding: 0.25rem; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text); outline: none;
+}
+.timer-seconds-input:focus { border-color: var(--border-hi); }
+
+.enter-btn {
+  background: var(--rose); color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.56rem; letter-spacing: 0.26em;
+  text-transform: uppercase; padding: 0.85rem 2rem;
+  border: none; cursor: pointer;
+  transition: background 0.18s;
+  display: inline-block; align-self: flex-start;
+}
+.enter-btn:hover { background: var(--text); }
+
+.intro-footer {
+  padding-top: 1.5rem; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 0.5rem;
+}
+
+.intro-footer-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.12em; color: var(--faint);
+}
+
+/* ── QUESTION SCREEN ── */
+#room {
+  min-height: 100vh; flex-direction: column;
+  justify-content: center;
+  padding: clamp(3rem, 7vw, 5rem) clamp(2rem, 6vw, 5rem);
+  max-width: 800px; margin: 0 auto; width: 100%;
+}
+
+.room-hud {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 3.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.room-counter {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.room-phase-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #fff;
+  padding: 0.18rem 0.6rem; border-radius: 0;
+  background: var(--accent);
+  transition: background 1s ease;
+}
+
+/* ── TIMER ── */
+.timer-bar-wrap {
+  margin-bottom: 2rem;
+  height: 2px; background: var(--dim);
+  position: relative; overflow: hidden;
+}
+
+.timer-bar-fill {
+  position: absolute; top: 0; left: 0; height: 100%;
+  background: var(--accent);
+  transition: width linear, background 0.5s ease;
+}
+
+.timer-display {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.16em;
+  color: var(--faint); margin-top: 0.3rem;
+  text-align: right; transition: color 0.3s;
+}
+
+.timer-display.urgent { color: var(--rose); }
+
+/* ── QUESTION TEXT ── */
+.q-stream {
+  font-size: clamp(1.2rem, 2.8vw, 1.85rem);
+  font-weight: 300; line-height: 1.45; letter-spacing: -0.01em;
+  color: var(--text); margin-bottom: 0.6rem;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.q-stream.visible { opacity: 1; transform: translateY(0); }
+
+.q-axis {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 2.8rem;
+  opacity: 0; transition: opacity 0.4s ease 0.1s;
+}
+.q-axis.visible { opacity: 1; }
+.q-axis.axis-input { color: var(--rose-mid); }
+.q-axis.axis-output { color: var(--cyan-mid); }
+.q-axis.axis-both { color: var(--violet-mid); }
+
+/* ── SNAP ZONE (timed questions) ── */
+.snap-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(30,24,32,0.92);
+  flex-direction: column; justify-content: center; align-items: center;
+  padding: 2rem;
+}
+.snap-overlay.active { display: flex; }
+
+.snap-countdown {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: clamp(4rem, 12vw, 8rem);
+  font-weight: 500; color: var(--rose);
+  line-height: 1; margin-bottom: 1rem;
+  animation: snap-pulse 1s ease-in-out infinite;
+}
+@keyframes snap-pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.snap-q {
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+  font-weight: 300; line-height: 1.4;
+  color: #fff; text-align: center;
+  max-width: 560px; margin-bottom: 2.5rem;
+}
+
+.snap-input-wrap { width: 100%; max-width: 560px; }
+
+.snap-input {
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: none; border-bottom: 1px solid rgba(255,255,255,0.25);
+  color: #fff; font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9rem; font-weight: 300;
+  padding: 0.7rem 0; resize: none; outline: none;
+  line-height: 1.8; min-height: 72px;
+}
+.snap-input::placeholder { color: rgba(255,255,255,0.25); }
+
+.snap-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.3); text-transform: uppercase;
+  margin-bottom: 1.2rem;
+}
+
+.snap-submit {
+  margin-top: 1rem;
+  background: var(--rose); color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.54rem; letter-spacing: 0.22em;
+  text-transform: uppercase; padding: 0.7rem 1.5rem;
+  border: none; cursor: pointer; transition: background 0.15s;
+}
+.snap-submit:hover { background: var(--rose-mid); }
+
+.snap-auto-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.25); margin-top: 0.6rem;
+  text-align: right;
+}
+
+/* ── ANSWER AREA ── */
+.answer-wrap {
+  opacity: 0; transform: translateY(4px);
+  transition: opacity 0.45s ease 0.15s, transform 0.45s ease 0.15s;
+  margin-bottom: 2rem;
+}
+.answer-wrap.visible { opacity: 1; transform: translateY(0); }
+
+.field-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 0.65rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.field-label::after { content: ''; flex: 1; height: 1px; background: var(--dim); }
+
+.text-input {
+  width: 100%; background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem; font-weight: 300;
+  padding: 0.9rem 1rem; resize: none; outline: none;
+  line-height: 1.9; min-height: 88px;
+  transition: border-color 0.2s, background 0.2s, border-left-color 1s ease;
+}
+.text-input:focus { border-color: var(--border-hi); background: #fff; }
+.text-input::placeholder { color: var(--faint); }
+
+.input-hint {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.1em;
+  color: var(--faint); margin-top: 0.35rem; min-height: 1em;
+}
+
+/* Choice buttons */
+.choices { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.choice-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem; font-weight: 300;
+  padding: 0.65rem 0.9rem; text-align: left;
+  cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em;
+  line-height: 1.55;
+}
+.choice-btn:hover { border-color: var(--border-hi); color: var(--text); background: var(--panel); }
+.choice-btn.selected {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+}
+
+/* Scale */
+.scale-row { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0 0.4rem; }
+.scale-pole {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; color: var(--muted); min-width: 80px; line-height: 1.5;
+}
+.scale-pole:last-child { text-align: right; }
+input[type=range] {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 1px; background: var(--border); outline: none; cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 10px; height: 10px;
+  background: var(--accent); border-radius: 50%;
+  transition: background 1s ease;
+}
+.scale-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.4rem; color: var(--text); text-align: center; margin-top: 0.2rem;
+}
+
+/* NAV */
+.room-nav {
+  display: flex; justify-content: flex-end;
+  padding-top: 1.2rem; border-top: 1px solid var(--dim);
+}
+
+.nav-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.54rem; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 0.5rem 1.1rem; cursor: pointer; transition: all 0.15s;
+}
+.nav-btn:hover { border-color: var(--border-hi); color: var(--text); }
+.nav-btn:disabled { opacity: 0.15; cursor: default; pointer-events: none; }
+.nav-btn.primary {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  transition: background 1s ease, border-color 1s ease;
+}
+.nav-btn.primary:hover { background: var(--text) !important; border-color: var(--text) !important; }
+
+/* Processing dots */
+.processing {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.18em; color: var(--muted); text-transform: uppercase;
+}
+.dots-inline { display: inline-flex; gap: 0.25rem; margin-left: 0.35rem; vertical-align: middle; }
+.dots-inline span {
+  width: 3px; height: 3px; background: var(--muted); border-radius: 50%;
+  animation: dp 1.2s ease-in-out infinite;
+}
+.dots-inline span:nth-child(2) { animation-delay: 0.2s; }
+.dots-inline span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dp {
+  0%,100% { opacity: 0.2; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+/* ── GENERATING SCREEN ── */
+#generating {
+  min-height: 100vh; flex-direction: column; justify-content: center;
+  padding: clamp(2rem, 6vw, 5rem); max-width: 800px; margin: 0 auto; width: 100%;
+}
+.gen-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.32em;
+  color: var(--faint); text-transform: uppercase; margin-bottom: 1.5rem;
+}
+.gen-dots { display: flex; gap: 0.4rem; }
+.gen-dots span {
+  width: 4px; height: 4px; border-radius: 50%;
+  animation: dp 1.2s ease-in-out infinite;
+}
+.gen-dots span:nth-child(1) { background: var(--rose); }
+.gen-dots span:nth-child(2) { background: var(--violet); animation-delay: 0.2s; }
+.gen-dots span:nth-child(3) { background: var(--cyan); animation-delay: 0.4s; }
+
+/* ── RESULT SCREEN ── */
+#result {
+  min-height: 100vh; flex-direction: column; justify-content: flex-start;
+  padding: clamp(4rem, 9vw, 6.5rem) clamp(2rem, 6vw, 5rem) 6rem;
+  max-width: 800px; margin: 0 auto; width: 100%;
+}
+
+.result-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 3rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);
+}
+
+.result-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.5rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.result-stamp {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.44rem; letter-spacing: 0.1em;
+  color: var(--faint); text-align: right; line-height: 1.8; white-space: pre;
+}
+
+/* Record of questions + answers */
+.record-entries {
+  display: flex; flex-direction: column; gap: 0;
+  opacity: 0; transition: opacity 1s ease;
+  border: 1px solid var(--border);
+}
+.record-entries.visible { opacity: 1; }
+
+.rec-entry {
+  border-bottom: 1px solid var(--dim);
+  overflow: hidden;
+}
+.rec-entry:last-child { border-bottom: none; }
+
+.rec-entry-header {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 0.7rem 1rem; background: var(--panel);
+  border-bottom: 1px solid var(--dim);
+}
+
+.rec-qnum {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.44rem; color: var(--faint);
+  flex-shrink: 0; padding-top: 0.1rem;
+}
+
+.rec-qtext {
+  font-size: 0.68rem; color: var(--text); line-height: 1.6; font-weight: 400;
+  flex: 1;
+}
+
+.rec-axis-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.4rem; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.1rem 0.4rem; flex-shrink: 0; margin-top: 0.1rem;
+}
+.rec-axis-tag.input { background: var(--rose-pale); color: var(--rose); }
+.rec-axis-tag.output { background: var(--cyan-pale); color: var(--cyan); }
+.rec-axis-tag.both { background: var(--violet-dim); color: var(--violet); }
+.rec-axis-tag.snap { background: #f0e8d0; color: #8c6820; }
+
+.rec-answer {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem; color: var(--muted);
+  padding: 0.65rem 1rem; line-height: 1.75;
+  background: var(--surface); white-space: pre-wrap;
+}
+
+/* Rule + Synthesis */
+.result-rule {
+  width: 0; height: 1px; background: var(--violet);
+  margin: 3rem 0;
+  opacity: 0; transition: opacity 0.6s ease, width 1s ease 0.3s;
+}
+.result-rule.visible { opacity: 1; width: 100%; }
+
+.synthesis-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.48rem; letter-spacing: 0.26em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 1.2rem;
+  opacity: 0; transition: opacity 0.6s ease;
+}
+.synthesis-label.visible { opacity: 1; }
+
+.synthesis-text {
+  font-size: 0.82rem; line-height: 2.1;
+  color: var(--text); white-space: pre-wrap;
+  background: var(--violet-dim);
+  border: 1px solid rgba(110,74,140,0.15);
+  border-left: 3px solid var(--violet);
+  padding: 1.1rem 1.2rem;
+  opacity: 0; transition: opacity 0.9s ease;
+}
+.synthesis-text.visible { opacity: 1; }
+
+.discussion-wrap {
+  margin-top: 2.5rem;
+  border: 1px solid var(--border);
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.discussion-wrap.visible { opacity: 1; }
+
+.discussion-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.55rem 1rem; background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 0.5rem;
+}
+
+.discussion-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.discussion-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.42rem; letter-spacing: 0.1em; color: var(--faint);
+}
+
+.discussion-list { display: flex; flex-direction: column; }
+
+.disc-item {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dim);
+  background: var(--surface);
+}
+.disc-item:last-child { border-bottom: none; }
+
+.disc-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.44rem; color: var(--faint);
+  flex-shrink: 0; padding-top: 0.15rem;
+}
+
+.disc-q {
+  font-size: 0.72rem; color: var(--text);
+  line-height: 1.65; font-weight: 300;
+}
+
+.result-footer {
+  margin-top: 3.5rem; padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 0.8rem;
+  opacity: 0; transition: opacity 0.8s ease;
+}
+.result-footer.visible { opacity: 1; }
+
+.result-footer-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.46rem; letter-spacing: 0.1em; color: var(--faint);
+}
+
+.restart-btn {
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.52rem; letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;
+}
+.restart-btn:hover { border-color: var(--border-hi); color: var(--text); }
+
+@media (max-width: 560px) {
+  .intro-audit { grid-template-columns: 1fr; }
+  .audit-col { border-right: none; border-bottom: 1px solid var(--border); }
+  .audit-col:last-child { border-bottom: none; }
+  .scale-pole { min-width: 55px; font-size: 0.46rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="prog-wrap">
+  <div class="prog-rose" id="progRose"></div>
+  <div class="prog-cyan" id="progCyan"></div>
+</div>
+
+<!-- SNAP OVERLAY (timed questions) -->
+<div class="snap-overlay" id="snapOverlay">
+  <div class="snap-countdown" id="snapCountdown">5</div>
+  <div class="snap-q" id="snapQ"></div>
+  <div class="snap-input-wrap">
+    <div class="snap-sub" id="snapSub"></div>
+    <textarea class="snap-input" id="snapInput" placeholder="First answer. Don't revise." rows="3"></textarea>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;">
+      <div class="snap-auto-note" id="snapAutoNote"></div>
+      <button class="snap-submit" id="snapSubmit" onclick="snapSubmit()">Lock it in →</button>
+    </div>
+  </div>
+</div>
+
+<!-- INTRO -->
+<div id="intro" class="screen active">
+  <div class="intro-header">
+    <div class="intro-header-left">
+      <div class="intro-dept">Identity &amp; Society · Grades 11–12</div>
+      <div class="intro-dept">An identity instrument</div>
+    </div>
+    <div class="intro-code" id="sessionId"></div>
+  </div>
+
+  <div class="intro-title-wrap">
+    <div class="intro-title">default</div>
+    <div class="intro-title intro-title-key">settings</div>
+
+    <p class="intro-premise">
+      Before you chose who to become, certain assumptions were already running.<br>
+      You did not write the original code.<br><br>
+      But you execute parts of it every day.<br><br>
+      This instrument examines two movements simultaneously:<br>
+      <strong>what was installed in you</strong>, and <strong>what you run on others</strong>.
+    </p>
+
+    <div class="intro-contract">
+      <div class="contract-item">This instrument has no correct answers.</div>
+      <div class="contract-item">What you write is data, not confession.</div>
+      <div class="contract-item">The portrait it generates is a reading, not a verdict.</div>
+    </div>
+
+    <div class="intro-audit">
+      <div class="audit-col">
+        <div class="audit-col-header rose-header">
+          <div class="col-dot"></div>
+          Input — what was installed
+        </div>
+        <div class="audit-item"><span class="audit-num">01</span><span>Expectations inherited from family</span></div>
+        <div class="audit-item"><span class="audit-num">02</span><span>Scripts absorbed from culture and media</span></div>
+        <div class="audit-item"><span class="audit-num">03</span><span>Norms installed by institutions and peers</span></div>
+        <div class="audit-item"><span class="audit-num">04</span><span>Permissions and constraints you internalised</span></div>
+      </div>
+      <div class="audit-col">
+        <div class="audit-col-header cyan-header">
+          <div class="col-dot"></div>
+          Output — what you run
+        </div>
+        <div class="audit-item"><span class="audit-num">01</span><span>Categories you apply automatically</span></div>
+        <div class="audit-item"><span class="audit-num">02</span><span>Who you trust more readily, and why</span></div>
+        <div class="audit-item"><span class="audit-num">03</span><span>Behaviours you reward, distrust, or dismiss</span></div>
+        <div class="audit-item"><span class="audit-num">04</span><span>Gaps between stated beliefs and instinctive judgements</span></div>
+      </div>
+    </div>
+
+    <div class="timer-config" id="timerConfig">
+      <div class="timer-config-label">Snap mode</div>
+      <div class="timer-mode-btns">
+        <button class="timer-mode-btn active" id="modeHard" onclick="setTimerMode('hard')">Hard (auto-lock)</button>
+        <button class="timer-mode-btn" id="modeSoft" onclick="setTimerMode('soft')">Soft (visible timer)</button>
+        <button class="timer-mode-btn" id="modeOff" onclick="setTimerMode('off')">Off</button>
+      </div>
+      <div class="timer-seconds-wrap" id="timerSecondsWrap">
+        <div class="timer-seconds-label">seconds per snap question</div>
+        <input type="number" class="timer-seconds-input" id="timerSeconds" value="8" min="3" max="30">
+      </div>
+    </div>
+
+    <button class="enter-btn" onclick="enterRoom()">Run the diagnostic →</button>
+  </div>
+
+  <div class="intro-footer">
+    <div class="intro-footer-note">Results are yours. You decide what leaves this room.</div>
+    <div class="intro-footer-note">The system did not begin with you, but parts of it continue through you.</div>
+  </div>
+</div>
+
+<!-- QUESTION ROOM -->
+<div id="room" class="screen">
+  <div class="room-hud">
+    <div class="room-counter">Question <span id="qNum">01</span> of <span id="qTotal">18</span></div>
+    <div class="room-phase-tag" id="phaseTag">Input</div>
+  </div>
+
+  <div class="timer-bar-wrap" id="timerBarWrap" style="display:none;">
+    <div class="timer-bar-fill" id="timerBarFill"></div>
+  </div>
+  <div class="timer-display" id="timerDisplay" style="display:none;"></div>
+
+  <div class="q-stream" id="qStream"></div>
+  <div class="q-axis" id="qAxis"></div>
+
+  <div class="answer-wrap" id="answerWrap">
+    <!-- built by JS -->
+  </div>
+
+  <div class="room-nav">
+    <button class="nav-btn primary" id="nextBtn" onclick="nextQ()" disabled>Next →</button>
+  </div>
+</div>
+
+<!-- GENERATING -->
+<div id="generating" class="screen">
+  <div class="gen-label">Reading the record</div>
+  <div class="gen-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="screen">
+  <div class="result-header">
+    <div class="result-title">DEFAULT SETTINGS — session record</div>
+    <div class="result-stamp" id="resultStamp"></div>
+  </div>
+
+  <div class="record-entries" id="recordEntries"></div>
+
+  <div class="result-rule" id="resultRule"></div>
+  <div class="synthesis-label" id="synthesisLabel">Portrait</div>
+  <div class="synthesis-text" id="synthesisText"></div>
+
+  <div class="discussion-wrap" id="discussionWrap">
+    <div class="discussion-header">
+      <div class="discussion-label">For discussion</div>
+      <div class="discussion-note">Generated from this student's specific record · for teacher use</div>
+    </div>
+    <div class="discussion-list" id="discussionList"></div>
+  </div>
+
+  <div class="result-footer" id="resultFooter">
+    <div class="result-footer-note">The system did not begin with you, but parts of it continue through you.</div>
+    <button class="restart-btn" onclick="restart()">Run again</button>
+  </div>
+</div>
+
+<script>
+const PROXY = "https://anthropic-proxy.justin-steinmetz.workers.dev";
+
+// ── SESSION ID ──
+document.getElementById('sessionId').textContent =
+  'DS-' + Math.random().toString(36).slice(2,5).toUpperCase() + '-' +
+  Math.random().toString(36).slice(2,5).toUpperCase();
+
+// ── TIMER CONFIG ──
+let timerMode = 'hard'; // 'hard' | 'soft' | 'off'
+let snapSeconds = 8;
+
+function setTimerMode(mode) {
+  timerMode = mode;
+  document.querySelectorAll('.timer-mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+  document.getElementById('timerSecondsWrap').style.display = mode === 'off' ? 'none' : '';
+}
+
+document.getElementById('timerSeconds').addEventListener('input', e => {
+  snapSeconds = Math.max(3, Math.min(30, parseInt(e.target.value) || 8));
+});
+
+// ── QUESTIONS ──
+// axis: 'input' | 'output' | 'both'
+// snap: true = timed question
+const QUESTIONS = [
+
+  // ── PHASE 1: INSTALLATION (what was installed) ──
+  {
+    phase: "Installation", axis: "input", snap: false,
+    q: "Describe the gender expectations in your household growing up. Not stated rules — actual patterns. Who did what? Who was praised for what?",
+    type: "text", minLength: 40,
+    placeholder: "Be specific about what you observed, not what you were told."
+  },
+  {
+    phase: "Installation", axis: "input", snap: false,
+    q: "What did 'being a man' or 'being a woman' mean in your family? Was that ever stated directly, or only performed?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "Installation", axis: "input", snap: false,
+    q: "Name three things you were praised for as a child. Name three things that were quietly discouraged — without being called wrong.",
+    type: "text", minLength: 40,
+    placeholder: "Praised for: ... Quietly discouraged: ..."
+  },
+  {
+    phase: "Installation", axis: "input", snap: false,
+    q: "What class background did you grow up in? And: what did that background teach you to expect from life?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "Installation", axis: "input", snap: false,
+    q: "Name one belief about race, gender, class, or sexuality that you absorbed before you were aware of it. Where did it come from?",
+    type: "text", minLength: 30,
+    placeholder: "Not 'I was taught to be kind'. Something specific."
+  },
+
+  // ── PHASE 2: EXECUTION (what you run on others) ──
+  {
+    phase: "Execution", axis: "output", snap: true,
+    q: "You enter a waiting room. Two people are there: one is well-dressed and one is not. Who do you sit closer to?",
+    sub: "First instinct. Don't explain it yet.",
+    type: "text", minLength: 1
+  },
+  {
+    phase: "Execution", axis: "output", snap: true,
+    q: "A person speaks to you and their accent is strong — not your accent. What happens in you in the first three seconds?",
+    sub: "First honest answer.",
+    type: "text", minLength: 1
+  },
+  {
+    phase: "Execution", axis: "output", snap: true,
+    q: "Someone you don't know walks towards you at night. What details make you relax or tighten?",
+    sub: "Be honest. This is the data.",
+    type: "text", minLength: 1
+  },
+  {
+    phase: "Execution", axis: "output", snap: false,
+    q: "Now: what do your answers to the previous three questions reveal about the categories you apply automatically?",
+    type: "text", minLength: 40,
+    placeholder: "Look at what you just said. What pattern is visible?"
+  },
+  {
+    phase: "Execution", axis: "output", snap: false,
+    q: "Think of a person you instinctively distrust. Don't name them. What is it, exactly, that registers as untrustworthy?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "Execution", axis: "output", snap: false,
+    q: "Who do you find it hardest to take seriously as an authority — in what context, and what does that person look like?",
+    type: "text", minLength: 20,
+    placeholder: ""
+  },
+
+  // ── PHASE 3: LOOP (where input becomes output) ──
+  {
+    phase: "The loop", axis: "both", snap: false,
+    q: "You claim certain progressive or open-minded beliefs. In the last month, describe a moment when your instinctive behaviour contradicted one of those beliefs.",
+    type: "text", minLength: 40,
+    placeholder: "Not a hypothetical. Something that actually happened."
+  },
+  {
+    phase: "The loop", axis: "both", snap: false,
+    q: "What kinds of people do you reward with more patience, attention, or generosity? What connects them?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "The loop", axis: "both", snap: false,
+    q: "When a norm you conform to is violated by someone else — what is your response? Discomfort? Contempt? Relief? Explain.",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "The loop", axis: "both", snap: true,
+    q: "Name someone — type of person, not individual — whose pain you find it harder to take seriously than others'.",
+    sub: "You know the answer. Don't manage it.",
+    type: "text", minLength: 1
+  },
+  {
+    phase: "The loop", axis: "both", snap: false,
+    q: "Where are you currently revising the code? What assumption are you actively working to examine — and what's making it difficult?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+
+  // ── PHASE 4: CONFRONTATION ──
+  {
+    phase: "Confrontation", axis: "both", snap: false,
+    q: "Between the norms you inherited and the judgements you project onto others: which is harder to examine? Why?",
+    type: "text", minLength: 30,
+    placeholder: ""
+  },
+  {
+    phase: "Confrontation", axis: "both", snap: false,
+    q: "The system did not begin with you. But which parts of it continue through you — specifically, in ordinary daily acts of perception, expectation, and judgement?",
+    type: "text", minLength: 40,
+    placeholder: "Be concrete. Not structural — personal."
+  }
+];
+
+const TOTAL = QUESTIONS.length;
+let current = 0;
+let answers = new Array(TOTAL).fill('');
+let scaleValues = {};
+let snapTimerInterval = null;
+let snapTimeRemaining = 0;
+let snapAnswerLocked = false;
+
+// Phase colour mapping
+const PHASE_COLOURS = {
+  "Installation": { accent: '#c4607a', dim: '#f0e4e8', mid: '#d8849a', body: 'phase-rose' },
+  "Execution":    { accent: '#3a7a8c', dim: '#deeef2', mid: '#5a9aac', body: 'phase-cyan' },
+  "The loop":     { accent: '#6e4a8c', dim: '#ede4f4', mid: '#9a78bc', body: 'phase-violet' },
+  "Confrontation":{ accent: '#3a3042', dim: '#e8e4f0', mid: '#6a6082', body: 'phase-dark' }
+};
+
+function updatePhaseColours(phase) {
+  const c = PHASE_COLOURS[phase] || PHASE_COLOURS["Installation"];
+  document.documentElement.style.setProperty('--accent', c.accent);
+  document.documentElement.style.setProperty('--accent-dim', c.dim);
+  document.documentElement.style.setProperty('--accent-mid', c.mid);
+
+  // Update body gradient
+  document.body.className = '';
+  if (phase === "The loop" || phase === "Confrontation") {
+    document.body.classList.add('phase-dissolve');
+  }
+}
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function enterRoom() {
+  snapSeconds = parseInt(document.getElementById('timerSeconds').value) || 8;
+  show('room');
+  renderQ(0);
+}
+
+function updateProgress(index) {
+  // Rose fills from left (input questions), cyan fills from right (output questions)
+  const pct = (index + 1) / TOTAL * 100;
+  const q = QUESTIONS[index];
+  if (q.axis === 'input') {
+    document.getElementById('progRose').style.width = pct + '%';
+  } else if (q.axis === 'output') {
+    document.getElementById('progCyan').style.width = pct + '%';
+  } else {
+    // Both — fill from both ends toward centre
+    document.getElementById('progRose').style.width = (pct * 0.5) + '%';
+    document.getElementById('progCyan').style.width = (pct * 0.5) + '%';
+  }
+}
+
+function renderQ(index) {
+  current = index;
+  const q = QUESTIONS[index];
+
+  updateProgress(index);
+  updatePhaseColours(q.phase);
+
+  // HUD
+  document.getElementById('qNum').textContent = String(index + 1).padStart(2, '0');
+  document.getElementById('qTotal').textContent = TOTAL;
+  document.getElementById('phaseTag').textContent = q.phase;
+
+  // Axis label
+  const axisEl = document.getElementById('qAxis');
+  axisEl.className = 'q-axis';
+  if (q.axis === 'input') { axisEl.textContent = '↓ Input — what was installed'; axisEl.classList.add('axis-input'); }
+  else if (q.axis === 'output') { axisEl.textContent = '↑ Output — what you run'; axisEl.classList.add('axis-output'); }
+  else { axisEl.textContent = '↕ Loop — input becoming output'; axisEl.classList.add('axis-both'); }
+
+  // Timer bar
+  const timerBarWrap = document.getElementById('timerBarWrap');
+  const timerDisplay = document.getElementById('timerDisplay');
+  timerBarWrap.style.display = 'none';
+  timerDisplay.style.display = 'none';
+
+  // Question text
+  const qEl = document.getElementById('qStream');
+  const answerWrap = document.getElementById('answerWrap');
+  qEl.classList.remove('visible');
+  axisEl.classList.remove('visible');
+  answerWrap.classList.remove('visible');
+
+  document.getElementById('nextBtn').disabled = true;
+
+  setTimeout(() => {
+    qEl.textContent = q.q;
+    qEl.classList.add('visible');
+    setTimeout(() => axisEl.classList.add('visible'), 120);
+
+    // Is this a snap question?
+    if (q.snap && timerMode !== 'off') {
+      setTimeout(() => launchSnap(index), 350);
+    } else {
+      setTimeout(() => {
+        buildAnswerArea(q, index);
+        answerWrap.classList.add('visible');
+        setTimeout(() => focusAnswerArea(), 150);
+      }, 250);
+    }
+  }, 80);
+}
+
+function launchSnap(index) {
+  const q = QUESTIONS[index];
+  snapAnswerLocked = false;
+  snapTimeRemaining = snapSeconds;
+
+  document.getElementById('snapQ').textContent = q.q;
+  document.getElementById('snapSub').textContent = q.sub || 'First answer.';
+  document.getElementById('snapInput').value = answers[index] || '';
+  document.getElementById('snapInput').disabled = false;
+
+  const overlay = document.getElementById('snapOverlay');
+  overlay.classList.add('active');
+
+  if (timerMode === 'hard') {
+    document.getElementById('snapAutoNote').textContent = 'Auto-locks when time expires';
+  } else {
+    document.getElementById('snapAutoNote').textContent = 'Soft timer — submit when ready';
+  }
+
+  updateSnapCountdown();
+  clearInterval(snapTimerInterval);
+  snapTimerInterval = setInterval(() => {
+    snapTimeRemaining--;
+    updateSnapCountdown();
+    if (snapTimeRemaining <= 0) {
+      clearInterval(snapTimerInterval);
+      if (timerMode === 'hard') {
+        autoLockSnap(index);
+      }
+    }
+  }, 1000);
+
+  setTimeout(() => document.getElementById('snapInput').focus(), 100);
+}
+
+function updateSnapCountdown() {
+  const el = document.getElementById('snapCountdown');
+  el.textContent = Math.max(0, snapTimeRemaining);
+  if (snapTimeRemaining <= 3) {
+    el.style.color = '#e87a3a';
+  } else {
+    el.style.color = 'var(--rose)';
+  }
+}
+
+function autoLockSnap(index) {
+  if (snapAnswerLocked) return;
+  snapAnswerLocked = true;
+  const val = document.getElementById('snapInput').value;
+  answers[index] = val || '[no answer — time expired]';
+  document.getElementById('snapInput').disabled = true;
+  closeSnap(index);
+}
+
+function snapSubmit() {
+  if (snapAnswerLocked) return;
+  clearInterval(snapTimerInterval);
+  snapAnswerLocked = true;
+  const val = document.getElementById('snapInput').value;
+  answers[current] = val || '[submitted empty]';
+  closeSnap(current);
+}
+
+function closeSnap(index) {
+  const overlay = document.getElementById('snapOverlay');
+  overlay.classList.remove('active');
+
+  // Now show the reflective answer area (the snap already captured instinct)
+  const q = QUESTIONS[index];
+  const answerWrap = document.getElementById('answerWrap');
+  buildAnswerArea(q, index, true);
+  answerWrap.classList.add('visible');
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function buildAnswerArea(q, index, snapMode) {
+  const wrap = document.getElementById('answerWrap');
+  wrap.innerHTML = '';
+
+  if (snapMode) {
+    // Show the locked snap answer, then offer space for reflection
+    const snapRecord = document.createElement('div');
+    snapRecord.style.cssText = 'margin-bottom:1.5rem;';
+
+    const snapLabelEl = document.createElement('div');
+    snapLabelEl.className = 'field-label';
+    snapLabelEl.textContent = 'First answer (locked)';
+
+    const snapVal = document.createElement('div');
+    snapVal.style.cssText = `font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--text);
+      background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--rose);
+      padding:0.8rem 1rem;line-height:1.8;`;
+    snapVal.textContent = answers[index] || '—';
+
+    snapRecord.appendChild(snapLabelEl);
+    snapRecord.appendChild(snapVal);
+    wrap.appendChild(snapRecord);
+
+    // Optional: reflection on the snap (what does your first answer reveal?)
+    const reflLabel = document.createElement('div');
+    reflLabel.className = 'field-label';
+    reflLabel.textContent = 'What surprised you about what you wrote?';
+
+    const reflInput = document.createElement('textarea');
+    reflInput.className = 'text-input';
+    reflInput.placeholder = 'Optional. What surprised you — or didn\'t?';
+    reflInput.value = answers[index + '_refl'] || '';
+    reflInput.addEventListener('input', e => { answers[index + '_refl'] = e.target.value; });
+
+    wrap.appendChild(reflLabel);
+    wrap.appendChild(reflInput);
+    return;
+  }
+
+  if (q.type === 'text') {
+    const lbl = document.createElement('div');
+    lbl.className = 'field-label';
+    lbl.textContent = 'Your response';
+
+    const ta = document.createElement('textarea');
+    ta.className = 'text-input';
+    ta.placeholder = q.placeholder || '';
+    ta.value = answers[index] || '';
+    ta.rows = 4;
+
+    const hint = document.createElement('div');
+    hint.className = 'input-hint';
+
+    ta.addEventListener('input', e => {
+      answers[index] = e.target.value;
+      const minL = q.minLength || 0;
+      hint.textContent = (minL && e.target.value.trim().length < minL) ? 'keep going' : '';
+      checkNext(index);
+    });
+
+    hint.textContent = (q.minLength && ta.value.trim().length < q.minLength) ? 'keep going' : '';
+    wrap.appendChild(lbl);
+    wrap.appendChild(ta);
+    wrap.appendChild(hint);
+
+  } else if (q.type === 'choice') {
+    const choicesWrap = document.createElement('div');
+    choicesWrap.className = 'choices';
+    q.choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn' + (answers[index] === c ? ' selected' : '');
+      btn.textContent = c;
+      btn.addEventListener('click', () => {
+        answers[index] = c;
+        choicesWrap.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        checkNext(index);
+      });
+      choicesWrap.appendChild(btn);
+    });
+    wrap.appendChild(choicesWrap);
+
+  } else if (q.type === 'scale') {
+    const lbl = document.createElement('div');
+    lbl.className = 'field-label';
+    lbl.textContent = q.left + ' ↔ ' + q.right;
+
+    const row = document.createElement('div');
+    row.className = 'scale-row';
+
+    const lp = document.createElement('div'); lp.className = 'scale-pole'; lp.textContent = q.left;
+    const rp = document.createElement('div'); rp.className = 'scale-pole'; rp.textContent = q.right;
+
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = 1; slider.max = 10;
+    slider.value = scaleValues[index] !== undefined ? scaleValues[index] : 5;
+
+    const disp = document.createElement('div'); disp.className = 'scale-val';
+    disp.textContent = slider.value;
+
+    slider.addEventListener('input', e => {
+      scaleValues[index] = parseInt(e.target.value);
+      disp.textContent = e.target.value;
+      answers[index] = `${e.target.value}/10`;
+      checkNext(index);
+    });
+
+    if (!answers[index]) answers[index] = `${slider.value}/10`;
+
+    row.appendChild(lp); row.appendChild(slider); row.appendChild(rp);
+    wrap.appendChild(lbl);
+    wrap.appendChild(row);
+    wrap.appendChild(disp);
+  }
+
+  checkNext(index);
+}
+
+function focusAnswerArea() {
+  const ta = document.querySelector('#answerWrap textarea');
+  if (ta) ta.focus();
+}
+
+function checkNext(index) {
+  const q = QUESTIONS[index];
+  const nextBtn = document.getElementById('nextBtn');
+
+  if (q.type === 'text') {
+    const ta = document.querySelector('#answerWrap textarea:not([disabled])');
+    if (!ta) { nextBtn.disabled = false; return; }
+    const val = ta.value.trim();
+    const minL = q.minLength || 0;
+    nextBtn.disabled = val.length < minL;
+  } else if (q.type === 'choice') {
+    nextBtn.disabled = !answers[index];
+  } else if (q.type === 'scale') {
+    nextBtn.disabled = false;
+  }
+
+  const isLast = index === TOTAL - 1;
+  nextBtn.textContent = isLast ? 'Complete →' : 'Next →';
+}
+
+function nextQ() {
+  // Collect text answers
+  const ta = document.querySelector('#answerWrap textarea:not([disabled])');
+  if (ta && document.querySelector('#answerWrap .text-input') === ta) {
+    answers[current] = ta.value;
+  }
+
+  if (current === TOTAL - 1) {
+    generate();
+  } else {
+    renderQ(current + 1);
+  }
+}
+
+// ── GENERATE ──
+async function generate() {
+  document.body.classList.add('phase-result');
+  show('generating');
+
+  const qaPairs = QUESTIONS.map((q, i) => {
+    let val = (answers[i] || '').trim();
+    const refl = (answers[i + '_refl'] || '').trim();
+    if (q.snap && val) {
+      val = `[SNAP — first instinct, ${snapSeconds}s]: ${val}`;
+      if (refl) val += `\n[Reflection on snap]: ${refl}`;
+    }
+    const cleaned = val.toLowerCase();
+    let tag = '';
+    if (!cleaned) tag = ' [empty]';
+    else if (['idk','not sure','unsure','dunno','n/a','nothing'].includes(cleaned)) tag = ' [deflection]';
+    else if (cleaned.length < 8) tag = ' [minimal]';
+    return `Q${i+1} [${q.phase} / ${q.axis}${q.snap ? ' / SNAP' : ''}]: ${q.q}\nA: ${val || '[no answer]'}${tag}`;
+  }).join('\n\n');
+
+  const prompt = `You have administered DEFAULT SETTINGS, an identity instrument, to a student aged 16–18. The instrument examines two movements simultaneously: (1) what was installed in the student — inherited norms from family, culture, media, institutions; and (2) what the student runs on others — the automatic categories and judgements they project.
+
+The questions are divided into four phases:
+- Installation: what was installed (gender expectations, class, inherited beliefs)
+- Execution: what they run on others (instinctive snap judgements, trust, authority)
+- The loop: where input becomes output — how inherited norms become enacted judgements
+- Confrontation: the gap between stated values and instinctive behaviour
+
+SNAP questions capture first instinct (timed, unrevised). These are primary data.
+
+Here are their responses:
+
+${qaPairs}
+
+Your task is to write the AI portrait for DEFAULT SETTINGS, plus three personalised discussion questions.
+
+The portrait must do three things:
+1. Name the inherited norms and assumptions most visible in their Installation answers.
+2. Name the specific categories they appear to apply to others, drawn from their Execution and Loop answers. Be concrete — what kinds of people, what signals they are reading.
+3. Identify the most significant gap between their stated beliefs or commitments and the instinctive judgements the SNAP questions surfaced. Name it directly. Do not soften it.
+
+Rules:
+- Every claim must be traceable to something they actually said or conspicuously avoided.
+- [empty], [deflection], and [minimal] on snap and confrontation questions are primary data. Treat absence as the most revealing answer.
+- PERFORMANCE: if answers read as managed, socially acceptable, or carefully constructed to avoid self-incrimination — name the performance explicitly. Do not work around it. "Your answer here reads as a performance of awareness rather than evidence of it" is more useful than treating performed honesty as real honesty.
+- Do not use psychological jargon: not 'authentic', not 'journey', not 'growth', not 'trauma', not 'resilience'.
+- Do not moralise. Do not reassure. Do not praise. State contradictions without resolving them.
+- Write in second person, directly to them.
+- Do not begin with 'You'. Find a different entry.
+- The portrait is an interpretation, not a summary.
+- The final sentence should name where the student is — not where they should go.
+
+The signature line of the project is: "The system did not begin with you, but parts of it continue through you." The portrait should make the specific parts visible.
+
+For the discussion questions: generate exactly three questions derived specifically from this student's record — not generic reflection prompts. Each question should point to something concrete in what they wrote: a specific contradiction, an evasion, a gap between a snap answer and a stated belief, or something they named without examining. These questions are for teacher use in debrief.
+
+Output format — exactly, no deviations:
+
+PORTRAIT:
+[200–280 words. Specific. Grounded in their actual answers. Names inherited norms, projected categories, and the gap between stated and instinctive. Does not resolve. Does not end hopefully.]
+
+HEADLINE:
+[3–6 words. Names the central structural gap or pattern. Not a type. Not flattering or cruel. Precise.]
+
+SIGNATURE:
+[One sentence — the specific "parts of it that continue through you" as applied to this student. Not the generic line. Specific to what they revealed.]
+
+DISCUSSION:
+Q1: [Question derived from a specific contradiction or gap in their record]
+Q2: [Question derived from a specific snap answer or evasion]
+Q3: [Question derived from something they named but did not examine]`;
+
+  try {
+    const resp = await fetch(PROXY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content.map(b => b.text || '').join('');
+
+    const portraitMatch  = text.match(/PORTRAIT:\s*([\s\S]+?)(?=HEADLINE:|$)/i);
+    const headlineMatch  = text.match(/HEADLINE:\s*(.+)/i);
+    const signatureMatch = text.match(/SIGNATURE:\s*([\s\S]+?)(?=DISCUSSION:|$)/i);
+    const discussionMatch = text.match(/DISCUSSION:\s*([\s\S]+)/i);
+
+    showResult(
+      portraitMatch  ? portraitMatch[1].trim()  : text,
+      headlineMatch  ? headlineMatch[1].trim()  : '—',
+      signatureMatch ? signatureMatch[1].trim() : '',
+      discussionMatch ? discussionMatch[1].trim() : ''
+    );
+  } catch(err) {
+    showResult('The system read the record. The record is yours.', '—', '', '');
+  }
+}
+
+function showResult(portrait, headline, signature, discussion) {
+  show('result');
+
+  // Stamp
+  const now = new Date();
+  document.getElementById('resultStamp').textContent =
+    document.getElementById('sessionId').textContent + '\n' +
+    now.toLocaleDateString('en-GB') + ' ' +
+    now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+  // Build record entries
+  const container = document.getElementById('recordEntries');
+  container.innerHTML = '';
+
+  QUESTIONS.forEach((q, i) => {
+    const entry = document.createElement('div');
+    entry.className = 'rec-entry';
+
+    const header = document.createElement('div');
+    header.className = 'rec-entry-header';
+
+    const num = document.createElement('div');
+    num.className = 'rec-qnum';
+    num.textContent = String(i + 1).padStart(2, '0');
+
+    const qText = document.createElement('div');
+    qText.className = 'rec-qtext';
+    qText.textContent = q.q;
+
+    const tag = document.createElement('div');
+    tag.className = 'rec-axis-tag ' + (q.snap ? 'snap' : q.axis);
+    tag.textContent = q.snap ? 'snap' : q.axis;
+
+    header.appendChild(num);
+    header.appendChild(qText);
+    header.appendChild(tag);
+
+    const ansDiv = document.createElement('div');
+    ansDiv.className = 'rec-answer';
+    let ansText = (answers[i] || '—').trim() || '—';
+    const refl = (answers[i + '_refl'] || '').trim();
+    if (q.snap && refl) ansText += '\n\nReflection: ' + refl;
+    ansDiv.textContent = ansText;
+
+    entry.appendChild(header);
+    entry.appendChild(ansDiv);
+    container.appendChild(entry);
+  });
+
+  setTimeout(() => container.classList.add('visible'), 200);
+
+  // Synthesis
+  setTimeout(() => {
+    const rule = document.getElementById('resultRule');
+    const label = document.getElementById('synthesisLabel');
+    const text = document.getElementById('synthesisText');
+
+    rule.classList.add('visible');
+    setTimeout(() => {
+      label.classList.add('visible');
+      text.textContent = headline + '\n\n' + portrait + (signature ? '\n\n' + signature : '');
+      setTimeout(() => text.classList.add('visible'), 200);
+    }, 400);
+  }, 1200);
+
+  // Discussion questions — visible only after portrait
+  setTimeout(() => {
+    if (discussion) {
+      const discWrap = document.getElementById('discussionWrap');
+      const discList = document.getElementById('discussionList');
+      discList.innerHTML = '';
+
+      // Parse Q1/Q2/Q3 lines
+      const lines = discussion.split('\n').filter(l => l.trim());
+      lines.forEach((line, i) => {
+        const cleaned = line.replace(/^Q\d+:\s*/i, '').trim();
+        if (!cleaned) return;
+        const item = document.createElement('div');
+        item.className = 'disc-item';
+        const num = document.createElement('div');
+        num.className = 'disc-num';
+        num.textContent = String(i + 1).padStart(2, '0');
+        const q = document.createElement('div');
+        q.className = 'disc-q';
+        q.textContent = cleaned;
+        item.appendChild(num);
+        item.appendChild(q);
+        discList.appendChild(item);
+      });
+
+      setTimeout(() => discWrap.classList.add('visible'), 400);
+    }
+    document.getElementById('resultFooter').classList.add('visible');
+  }, 3800);
+}
+
+function restart() {
+  answers = new Array(TOTAL).fill('');
+  scaleValues = {};
+  current = 0;
+  snapAnswerLocked = false;
+  clearInterval(snapTimerInterval);
+
+  document.getElementById('progRose').style.width = '0%';
+  document.getElementById('progCyan').style.width = '0%';
+  document.getElementById('recordEntries').classList.remove('visible');
+  ['resultRule','synthesisLabel','synthesisText','resultFooter','discussionWrap']
+    .forEach(id => document.getElementById(id).classList.remove('visible'));
+
+  document.documentElement.style.setProperty('--accent', '#c4607a');
+  document.documentElement.style.setProperty('--accent-dim', '#f0e4e8');
+  document.documentElement.style.setProperty('--accent-mid', '#d8849a');
+  document.body.className = '';
+
+  // New session ID
+  document.getElementById('sessionId').textContent =
+    'DS-' + Math.random().toString(36).slice(2,5).toUpperCase() + '-' +
+    Math.random().toString(36).slice(2,5).toUpperCase();
+
+  show('intro');
+}
+</script>
+</body>
+</html>
